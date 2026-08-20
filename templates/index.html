@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Urban Heat Island Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1220;
+    --surface:#121A2B;
+    --surface-2:#182234;
+    --line: rgba(232,238,245,0.09);
+    --text:#E8EEF5;
+    --muted:#8B9AB5;
+    --urban:#D6544A;
+    --industrial:#C9822B;
+    --green:#3F9C6D;
+    --water:#2E7DAA;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1000px 500px at 85% -10%, rgba(46,125,170,0.16), transparent),
+      radial-gradient(800px 400px at 0% 100%, rgba(214,84,74,0.10), transparent),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+  }
+  .grain{position:fixed; inset:0; pointer-events:none; opacity:0.03; z-index:0;
+    background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+  .layout{
+    position:relative; z-index:1;
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width: 900px){
+    .layout{grid-template-columns: 1fr;}
+  }
+
+  /* ---------- LEFT / THESIS PANEL ---------- */
+  .intro{
+    padding:56px 40px;
+    border-right:1px solid var(--line);
+    position:sticky; top:0; align-self:start; height:100vh;
+    display:flex; flex-direction:column; justify-content:space-between;
+    overflow:hidden;
+  }
+  @media (max-width:900px){ .intro{position:relative; height:auto;} }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:18px;
+  }
+  .eyebrow span{color:var(--urban);}
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:clamp(30px, 3.4vw, 42px);
+    line-height:1.08;
+    margin:0 0 20px 0;
+    letter-spacing:-0.01em;
+  }
+  h1 em{
+    font-style:normal;
+    background:linear-gradient(90deg, var(--water), var(--green) 45%, var(--industrial) 75%, var(--urban));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .intro p.lede{
+    color:var(--muted); font-size:15px; line-height:1.65; max-width:34ch;
+  }
+
+  .legend{
+    display:flex; flex-direction:column; gap:10px; margin-top:36px;
+  }
+  .legend-row{
+    display:flex; align-items:center; gap:10px;
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--muted);
+  }
+  .dot{width:9px; height:9px; border-radius:50%; flex:0 0 auto;}
+
+  .stat-strip{
+    display:flex; gap:22px; margin-top:40px; padding-top:24px; border-top:1px solid var(--line);
+  }
+  .stat b{display:block; font-family:'Space Grotesk',sans-serif; font-size:20px;}
+  .stat span{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;}
+
+  .method-note{
+    font-size:11.5px; color:var(--muted); line-height:1.6; margin-top:24px;
+  }
+
+  /* ---------- RIGHT / FORM ---------- */
+  .work{ padding:56px 48px 90px; }
+  @media (max-width:900px){ .work{padding:40px 22px 70px;} }
+
+  .work-head{ margin-bottom: 34px; }
+  .work-head h2{
+    font-family:'Space Grotesk', sans-serif; font-size:22px; margin:0 0 6px;
+  }
+  .work-head p{ color:var(--muted); font-size:13.5px; margin:0; }
+
+  .toolbar{ display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  .ghost-btn{
+    font-family:'JetBrains Mono', monospace; font-size:12px;
+    background:transparent; color:var(--text); border:1px solid var(--line);
+    padding:9px 14px; border-radius:7px; cursor:pointer; transition:.15s;
+  }
+  .ghost-btn:hover{ border-color: var(--water); color:#fff; }
+
+  form{ display:flex; flex-direction:column; gap:30px; }
+
+  .group{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 24px 8px;
+  }
+  .group h3{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 18px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .group h3::before{ content:''; width:14px; height:1px; background:var(--muted); }
+
+  .field{ margin-bottom:22px; }
+  .field-label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:13.5px; margin-bottom:9px; font-weight:500;
+  }
+  .field-label .val{
+    font-family:'JetBrains Mono', monospace; color:var(--water);
+    font-size:13px; min-width:70px; text-align:right;
+  }
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:4px; border-radius:2px;
+    background:linear-gradient(90deg, var(--water), var(--green), var(--industrial), var(--urban));
+    outline:none; opacity:0.85;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+    background:#fff; border:3px solid var(--bg);
+    box-shadow:0 0 0 1px var(--line); cursor:pointer; margin-top:-1px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px; height:16px; border-radius:50%;
+    background:#fff; border:3px solid var(--bg); cursor:pointer;
+  }
+  .range-minmax{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--muted); margin-top:4px; font-family:'JetBrains Mono', monospace;}
+
+  .submit-row{ display:flex; align-items:center; gap:16px; }
+  .predict-btn{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:15px;
+    background: linear-gradient(90deg, var(--water), var(--green));
+    color:#0B1220; border:none; padding:15px 30px; border-radius:9px;
+    cursor:pointer; transition:.15s transform, .15s box-shadow;
+  }
+  .predict-btn:hover{ transform:translateY(-1px); box-shadow:0 10px 24px rgba(46,125,170,0.28); }
+  .predict-btn:active{ transform:translateY(0); }
+  .predict-btn:disabled{ opacity:0.5; cursor:progress; }
+  .err{ color:var(--urban); font-size:13px; font-family:'JetBrains Mono', monospace; }
+
+  /* ---------- RESULT ---------- */
+  #result{ margin-top:8px; display:none; }
+  .result-card{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:32px;
+    animation: rise .5s ease both;
+  }
+  @keyframes rise{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
+
+  .result-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap;}
+  .result-tag{
+    font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.1em; color:var(--muted); margin-bottom:8px;
+  }
+  .result-title{ font-family:'Space Grotesk', sans-serif; font-size:30px; font-weight:700; }
+  .result-desc{ color:var(--muted); font-size:14.5px; line-height:1.6; max-width:56ch; margin-top:10px;}
+
+  .confidence-badge{
+    font-family:'JetBrains Mono', monospace; font-size:13px;
+    border-radius:8px; padding:10px 16px; text-align:center; min-width:110px;
+    background:var(--surface);
+    border:1px solid var(--line);
+  }
+  .confidence-badge b{ display:block; font-size:22px; font-family:'Space Grotesk',sans-serif; }
+
+  .spectrum{ margin-top:30px; }
+  .spectrum-label{ font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; font-family:'JetBrains Mono', monospace;}
+  .spectrum-track{ display:flex; gap:4px; height:10px; border-radius:6px; overflow:hidden; }
+  .spectrum-seg{ flex:1; background:var(--surface); position:relative; }
+  .spectrum-seg .fill{ position:absolute; inset:0; transform:scaleX(0); transform-origin:left; transition:transform .8s cubic-bezier(.2,.8,.2,1); }
+  .spectrum-ticks{ display:flex; gap:4px; margin-top:8px; }
+  .spectrum-ticks div{ flex:1; font-size:11px; font-family:'JetBrains Mono', monospace; color:var(--muted); text-align:center; }
+  .spectrum-ticks div b{ display:block; color:var(--text); font-size:13px; }
+
+  .compare{ margin-top:32px; display:grid; grid-template-columns:1fr 1fr; gap:14px 26px; }
+  @media (max-width:640px){ .compare{grid-template-columns:1fr;} }
+  .compare-row{ font-size:12.5px; }
+  .compare-label{ display:flex; justify-content:space-between; color:var(--muted); margin-bottom:5px; font-family:'JetBrains Mono', monospace; font-size:11px;}
+  .compare-bar{ position:relative; height:6px; background:var(--surface); border-radius:3px; overflow:visible;}
+  .compare-bar .cluster-avg{ position:absolute; top:-3px; width:2px; height:12px; background:var(--muted); }
+  .compare-bar .user-fill{ position:absolute; top:0; left:0; height:100%; border-radius:3px; background:var(--water); }
+
+  footer{ text-align:center; color:var(--muted); font-size:11.5px; padding:30px; font-family:'JetBrains Mono', monospace;}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="layout">
+
+  <!-- LEFT: THESIS -->
+  <div class="intro">
+    <div>
+      <div class="eyebrow">CAPSTONE <span>·</span> UNSUPERVISED LEARNING</div>
+      <h1>Where does a city sit on the <em>heat island</em> spectrum?</h1>
+      <p class="lede">
+        Thirteen geographic, climate and socio-economic signals, standardized and
+        passed through a K-Means model trained on cities, sort any location
+        into one of four thermal profiles.
+      </p>
+
+      <div class="legend">
+        <div class="legend-row"><span class="dot" style="background:var(--water)"></span> Water — cooler, humid, low heat retention</div>
+        <div class="legend-row"><span class="dot" style="background:var(--green)"></span> Green Space — high greenness, low AQI</div>
+        <div class="legend-row"><span class="dot" style="background:var(--industrial)"></span> Industrial — high energy use &amp; pollution</div>
+        <div class="legend-row"><span class="dot" style="background:var(--urban)"></span> Urban — dense, hot, low greenness</div>
+      </div>
+
+      <div class="stat-strip">
+        <div class="stat"><b></b><span>Training cities</span></div>
+        <div class="stat"><b>k=4</b><span>Clusters</span></div>
+        <div class="stat"><b>13</b><span>Features</span></div>
+      </div>
+    </div>
+
+    <div class="method-note">
+      Model: StandardScaler → KMeans (k=4, n_init=10, random_state=42).<br>
+      Cluster labels are the majority real-world Land Cover type observed in
+      each cluster during training — KMeans itself is unsupervised.
+    </div>
+  </div>
+
+  <!-- RIGHT: FORM -->
+  <div class="work">
+    <div class="work-head">
+      <h2>Describe a location</h2>
+      <p>Move the sliders to match a city's profile, or load a random training example.</p>
+      <div class="toolbar">
+        <button type="button" class="ghost-btn" id="randomizeBtn">⟳ Load random city</button>
+        <button type="button" class="ghost-btn" id="resetBtn">↺ Reset to averages</button>
+      </div>
+    </div>
+
+    <form id="predictForm"></form>
+
+    <div id="result"></div>
+  </div>
+</div>
+
+<footer>Urban Heat Island K-Means Clustering &middot; Flask + scikit-learn demo</footer>
+
+<script>
+const FEATURE_RANGES = {{ feature_ranges|tojson }};
+const FEATURE_COLS = {{ feature_cols|tojson }};
+
+const CLUSTER_COLORS = {
+  "Urban": "var(--urban)",
+  "Industrial": "var(--industrial)",
+  "Green Space": "var(--green)",
+  "Water": "var(--water)"
+};
+const CLUSTER_COLOR_HEX = {
+  "Urban": "#D6544A",
+  "Industrial": "#C9822B",
+  "Green Space": "#3F9C6D",
+  "Water": "#2E7DAA"
+};
+
+// Group features into sections for the form
+const GROUPS = [
+  { title: "Geography", fields: ["Latitude", "Longitude", "Elevation (m)"] },
+  { title: "Climate", fields: ["Temperature (°C)", "Wind Speed (km/h)", "Humidity (%)", "Annual Rainfall (mm)"] },
+  { title: "Human Activity", fields: ["Population Density (people/km²)", "Energy Consumption (kWh)", "GDP per Capita (USD)"] },
+  { title: "Environment & Health", fields: ["Air Quality Index (AQI)", "Urban Greenness Ratio (%)", "Health Impact (Mortality Rate/100k)"] }
+];
+
+function slug(name){ return name.replace(/[^a-zA-Z0-9]/g, "_"); }
+
+function decimalsFor(name){
+  if (["Latitude","Longitude"].includes(name)) return 2;
+  if (["Urban Greenness Ratio (%)","Humidity (%)","Wind Speed (km/h)"].includes(name)) return 1;
+  return 0;
+}
+
+function buildForm(){
+  const formEl = document.getElementById('predictForm');
+  formEl.innerHTML = "";
+
+  GROUPS.forEach(group => {
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'group';
+    const h3 = document.createElement('h3');
+    h3.textContent = group.title;
+    groupDiv.appendChild(h3);
+
+    group.fields.forEach(name => {
+      const r = FEATURE_RANGES[name];
+      const dec = decimalsFor(name);
+      const id = slug(name);
+      const step = dec === 0 ? 1 : (dec === 1 ? 0.1 : 0.01);
+
+      const field = document.createElement('div');
+      field.className = 'field';
+      field.innerHTML = `
+        <div class="field-label">
+          <span>${name}</span>
+          <span class="val" id="val_${id}">${r.mean.toFixed(dec)}</span>
+        </div>
+        <input type="range" id="range_${id}" data-name="${name}"
+               min="${r.min}" max="${r.max}" step="${step}" value="${r.mean}">
+        <div class="range-minmax"><span>${r.min.toFixed(dec)}</span><span>${r.max.toFixed(dec)}</span></div>
+      `;
+      groupDiv.appendChild(field);
+    });
+
+    formEl.appendChild(groupDiv);
+  });
+
+  // submit button
+  const submitRow = document.createElement('div');
+  submitRow.className = 'submit-row';
+  submitRow.innerHTML = `
+    <button type="submit" class="predict-btn" id="predictBtn">Classify location →</button>
+    <span class="err" id="errBox"></span>
+  `;
+  formEl.appendChild(submitRow);
+
+  // wire up live label updates
+  FEATURE_COLS.forEach(name => {
+    const id = slug(name);
+    const range = document.getElementById(`range_${id}`);
+    const val = document.getElementById(`val_${id}`);
+    range.addEventListener('input', () => {
+      val.textContent = parseFloat(range.value).toFixed(decimalsFor(name));
+    });
+  });
+}
+
+function getValues(){
+  const vals = {};
+  FEATURE_COLS.forEach(name => {
+    const id = slug(name);
+    vals[name] = document.getElementById(`range_${id}`).value;
+  });
+  return vals;
+}
+
+function setValues(vals){
+  FEATURE_COLS.forEach(name => {
+    const id = slug(name);
+    const range = document.getElementById(`range_${id}`);
+    const val = document.getElementById(`val_${id}`);
+    range.value = vals[name];
+    val.textContent = parseFloat(vals[name]).toFixed(decimalsFor(name));
+  });
+}
+
+function resetToAverages(){
+  const vals = {};
+  FEATURE_COLS.forEach(name => { vals[name] = FEATURE_RANGES[name].mean; });
+  setValues(vals);
+}
+
+function randomizeInputs(){
+  const vals = {};
+  FEATURE_COLS.forEach(name => {
+    const r = FEATURE_RANGES[name];
+    vals[name] = (Math.random() * (r.max - r.min) + r.min);
+  });
+  setValues(vals);
+}
+
+function renderResult(data){
+  const box = document.getElementById('result');
+  box.style.display = 'block';
+
+  const color = CLUSTER_COLOR_HEX[data.dominant_land_cover] || "#2E7DAA";
+
+  const spectrumOrder = ["Water", "Green Space", "Industrial", "Urban"];
+  const bySimLookup = {};
+  data.all_clusters.forEach(c => { bySimLookup[c.dominant_land_cover] = c.similarity; });
+
+  const segs = spectrumOrder.map(label => {
+    const sim = bySimLookup[label] ?? 0;
+    return `
+      <div class="spectrum-seg">
+        <div class="fill" style="background:${CLUSTER_COLOR_HEX[label]}"></div>
+      </div>`;
+  }).join("");
+
+  const ticks = spectrumOrder.map(label => {
+    const sim = (bySimLookup[label] ?? 0).toFixed(0);
+    return `<div><b>${sim}%</b>${label}</div>`;
+  }).join("");
+
+  const compareRows = FEATURE_COLS.map(name => {
+    const r = FEATURE_RANGES[name];
+    const userV = parseFloat(data.input_values[name]);
+    const avgV = data.cluster_means[name];
+    const span = r.max - r.min;
+    const userPct = Math.max(0, Math.min(100, ((userV - r.min) / span) * 100));
+    const avgPct = Math.max(0, Math.min(100, ((avgV - r.min) / span) * 100));
+    return `
+      <div class="compare-row">
+        <div class="compare-label"><span>${name}</span><span>${userV.toFixed(1)} vs cluster avg ${avgV.toFixed(1)}</span></div>
+        <div class="compare-bar">
+          <div class="user-fill" style="width:${userPct}%"></div>
+          <div class="cluster-avg" style="left:${avgPct}%"></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  box.innerHTML = `
+    <div class="result-card">
+      <div class="result-top">
+        <div>
+          <div class="result-tag">Predicted cluster ${data.cluster}</div>
+          <div class="result-title" style="color:${color}">${data.dominant_land_cover}</div>
+          <div class="result-desc">${data.description}</div>
+        </div>
+        <div class="confidence-badge">
+          <b>${data.confidence}%</b>
+          similarity
+        </div>
+      </div>
+
+      <div class="spectrum">
+        <div class="spectrum-label">Position across the four thermal profiles</div>
+        <div class="spectrum-track">${segs}</div>
+        <div class="spectrum-ticks">${ticks}</div>
+      </div>
+
+      <div class="spectrum-label" style="margin-top:30px;">Your input vs. this cluster's average <span style="color:var(--muted); text-transform:none; letter-spacing:0;">(grey tick = cluster average)</span></div>
+      <div class="compare">${compareRows}</div>
+    </div>
+  `;
+
+  // trigger bar fill animation next frame
+  requestAnimationFrame(() => {
+    const fills = box.querySelectorAll('.spectrum-seg .fill');
+    spectrumOrder.forEach((label, i) => {
+      const sim = bySimLookup[label] ?? 0;
+      fills[i].style.transform = `scaleX(${Math.max(sim / 100, 0.03)})`;
+    });
+  });
+
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildForm();
+
+  document.getElementById('randomizeBtn').addEventListener('click', randomizeInputs);
+  document.getElementById('resetBtn').addEventListener('click', resetToAverages);
+
+  document.getElementById('predictForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('predictBtn');
+    const errBox = document.getElementById('errBox');
+    errBox.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Classifying…';
+
+    try {
+      const resp = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getValues())
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        errBox.textContent = data.error || 'Something went wrong.';
+      } else {
+        renderResult(data);
+      }
+    } catch (err) {
+      errBox.textContent = 'Could not reach the server.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Classify location →';
+    }
+  });
+});
+</script>
+</body>
+</html>
